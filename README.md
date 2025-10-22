@@ -19,10 +19,11 @@ Surveillez **les flux RSS francophones**, **Wikipedia** et **Hacker News**, agr�
   - `streamlit_app` → interface web temps réel
 
 ---
-
+apercu : https://realtime-trend-gzopnecp7ueqoc7wseuxns.streamlit.app/
 ##  Démarrage Rapide
 
 ```bash
 git clone https://github.com/yominax/trends-realtime.git
 cd trends-realtime
 docker compose up -d --build
+ 
