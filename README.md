@@ -5,7 +5,8 @@ Surveillez **les flux RSS francophones**, **Wikipedia** et **Hacker News**, agr√
 ---
 
 ##  Architecture du Projet
-![Architecture](https://raw.githubusercontent.com/yominax/trends-realtime/main/docs/archi-diagram.png)
+![Architecture](image/architecturetrendsrealtime.png)
+
 
 ### Composants Principaux
 - **Producers**
