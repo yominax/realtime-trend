@@ -1,6 +1,6 @@
 #  Trends-Realtime — Médias & Tendances en Direct
 
-Surveillez **les flux RSS francophones**, **Wikipedia** et **Hacker News**, agrégés en temps réel via **Kafka + PostgreSQL + Streamlit**.
+Surveillez **les flux RSS francophones** et **Wikipedia** , agrégés en temps réel via **Kafka + PostgreSQL + Streamlit**.
 
 ---
 
