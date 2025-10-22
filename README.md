@@ -19,7 +19,7 @@ Surveillez **les flux RSS francophones** et **Wikipedia** , agrégés en temps r
   - `streamlit_app` → interface web temps réel
 
 ---
-apercu : https://realtime-trend-gzopnecp7ueqoc7wseuxns.streamlit.app/
+apercu : https://realtime-trend-4.onrender.com/
 ##  Démarrage Rapide
 
 ```bash
