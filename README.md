@@ -5,7 +5,7 @@ Surveillez **les flux RSS francophones**, **Wikipedia** et **Hacker News**, agr√
 ---
 
 ##  Architecture du Projet
-![Architecture](image/architecturetrendsrealtime.png)
+![Architecture](images/architecturetrendsrealtime.png)
 
 
 ### Composants Principaux
