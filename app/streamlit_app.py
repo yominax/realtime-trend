@@ -14,7 +14,7 @@ DBPORT = int(os.getenv("DB_PORT", "5432"))
 REFRESH = int(os.getenv("REFRESH_SEC", "60"))
 
 st.set_page_config(page_title="Trends Live — Médias FR", layout="wide")
-
+ 
 st.markdown(
     """
     <style>
@@ -30,7 +30,8 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-st.image("https://upload.wikimedia.org/wikipedia/commons/9/91/Octicons-rss-16.svg", width=60)
+st.image("images/newsLOGO.jpg", width=60)
+
 st.title("Trends Live — Médias FR")
 
 # ---------- Connexion DB (avec retry) ----------
