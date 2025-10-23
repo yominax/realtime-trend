@@ -30,7 +30,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-st.image("/images/newsLOGO.jpg", width=60)
+st.image("../images/newsLOGO.jpg", width=60)
 
 st.title("Trends Live — Médias FR")
 
