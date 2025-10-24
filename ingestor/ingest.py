@@ -38,19 +38,16 @@ VALUES (%s,%s,%s,%s,%s,%s)
 ON CONFLICT (url) DO NOTHING;
 """
 
+import psycopg2
+import os
+
 def conn():
-    for _ in range(5):
-        try:
-            c = psycopg2.connect(
-                host=DBH, dbname=DBN, user=DBU, password=DBP, port=DBPORT,
-                sslmode="disable"   # Render exige SSL
-            )
-            c.autocommit = True
-            return c
-        except Exception as e:
-            print(f"[DB] Connexion échouée: {e}")
-            time.sleep(5)
-    raise RuntimeError("Impossible de se connecter à la base PostgreSQL après plusieurs tentatives.")
+    dsn = os.getenv("DATABASE_URL")
+    if not dsn:
+        dsn = f"postgresql://{os.getenv('DB_USER')}:{os.getenv('DB_PASS')}@{os.getenv('DB_HOST')}:{os.getenv('DB_PORT')}/{os.getenv('DB_NAME')}?sslmode=require"
+    c = psycopg2.connect(dsn)
+    c.autocommit = True
+    return c
 
 def norm_ts(e):
     if e.get("published_parsed"):
