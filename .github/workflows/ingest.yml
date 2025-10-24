@@ -2,30 +2,29 @@ name: Scheduled Ingest (every 5m)
 
 on:
   schedule:
-    - cron: "*/5 * * * *"
-  workflow_dispatch:
+    - cron: '*/5 * * * *'   
+  workflow_dispatch:       
 
 jobs:
   ingest:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
-      - name: Checkout repository
+      - name: Checkout repo
         uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v4
         with:
           python-version: '3.11'
 
-      - name: Create virtual environment and install dependencies
+      - name: Install deps
         run: |
-          python -m venv venv
-          source venv/bin/activate
-          pip install --upgrade pip
-          pip install requests feedparser psycopg2-binary
+          python -m pip install --upgrade pip
+          pip install feedparser psycopg2-binary
 
-      - name: Run ingestion script inside venv
+      - name: Run ingest script
         env:
           DB_HOST: ${{ secrets.DB_HOST }}
           DB_NAME: ${{ secrets.DB_NAME }}
@@ -33,5 +32,4 @@ jobs:
           DB_PASS: ${{ secrets.DB_PASS }}
           DB_PORT: ${{ secrets.DB_PORT }}
         run: |
-          source venv/bin/activate
           python app/ingest.py --once
