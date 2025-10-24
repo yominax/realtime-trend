@@ -1,47 +1,38 @@
-import os, time, json, hashlib, requests, feedparser
+import os, time, hashlib, requests, feedparser
 from urllib.parse import urlparse
 from datetime import datetime, timezone, timedelta
 import psycopg2
 from psycopg2.extras import execute_batch
 
-# ----------------- CONFIG -----------------
+# ---------------- CONFIG ----------------
 DB_URL = os.getenv("DATABASE_URL")
 if not DB_URL:
     DB_URL = f"postgresql://{os.getenv('DB_USER')}:{os.getenv('DB_PASS')}@" \
              f"{os.getenv('DB_HOST')}:{os.getenv('DB_PORT','5432')}/{os.getenv('DB_NAME')}?sslmode=require"
 
-FEEDS = [
-    "https://www.bfmtv.com/rss/",
-    "https://www.france24.com/fr/rss",
-    "https://www.euronews.com/rss?language=fr",
-    "https://www.rtbf.be/info/rss",
-    "https://ici.radio-canada.ca/rss",
-    "https://www.francetvinfo.fr/titres.rss",
-    "https://www.20minutes.fr/feeds/rss-une.xml",
-    "https://www.lemonde.fr/rss/une.xml",
-    "https://www.lefigaro.fr/rss/feeds/actualite-france.xml",
-    "https://www.leparisien.fr/actualites-a-la-une.xml",
-    "https://www.ouest-france.fr/rss.xml",
-    "https://www.midilibre.fr/rss.php",
-    "https://www.ladepeche.fr/rss.xml",
-    "https://www.lavoixdunord.fr/rss.xml",
-    "https://www.courrierinternational.com/rss/all.xml",
-    "https://www.liberation.fr/arc/outboundfeeds/rss-all/",
-    "https://www.nouvelobs.com/rss.xml",
-    "https://www.lepoint.fr/rss.xml",
-    "https://www.challenges.fr/rss.xml",
-    "https://www.sudouest.fr/rss.xml",
-    "https://www.latribune.fr/rss/france.xml",
-    "https://www.rfi.fr/fr/rss",
-    "https://www.europe1.fr/rss.xml",
-    "https://www.huffingtonpost.fr/feeds/index.xml",
-    "https://www.rtl.fr/flux/rss/une-6809",
-    "https://rmc.bfmtv.com/rss/info/",
-    "https://www.francebleu.fr/rss/a-la-une.xml"
-]
-
 UA = "TrendsRealtimeBot/2.0 (+github.com/yominax/trends-realtime)"
 HDRS = {"User-Agent": UA}
+
+# RSS sources
+FEEDS_UNE = [
+    "https://www.lemonde.fr/rss/une.xml",
+    "https://www.lefigaro.fr/rss/feeds/actualite-france.xml",
+    "https://www.bfmtv.com/rss/",
+    "https://www.france24.com/fr/rss",
+    "https://www.francetvinfo.fr/titres.rss",
+    "https://www.leparisien.fr/actualites-a-la-une.xml",
+]
+FEEDS_CONTINU = [
+    "https://www.20minutes.fr/feeds/rss-une.xml",
+    "https://www.euronews.com/rss?language=fr",
+    "https://www.rfi.fr/fr/rss",
+    "https://rmc.bfmtv.com/rss/info/",
+    "https://www.huffingtonpost.fr/feeds/index.xml",
+    "https://ici.radio-canada.ca/rss",
+]
+
+WIKI_DOMAIN = "fr.wikipedia.org"
+WIKI_URL = f"https://{WIKI_DOMAIN}/w/api.php"
 
 DDL = """
 CREATE TABLE IF NOT EXISTS news_articles(
@@ -50,63 +41,120 @@ CREATE TABLE IF NOT EXISTS news_articles(
   ts_ingest TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   source TEXT, title TEXT, url TEXT UNIQUE, summary TEXT, kind TEXT
 );
-CREATE INDEX IF NOT EXISTS news_articles_pub_idx ON news_articles(published_ts DESC);
+CREATE INDEX IF NOT EXISTS news_articles_published_idx ON news_articles(published_ts DESC);
+
+CREATE TABLE IF NOT EXISTS wiki_rc(
+  id BIGSERIAL PRIMARY KEY,
+  ts TIMESTAMPTZ NOT NULL,
+  page TEXT, user_name TEXT, comment TEXT, delta INT, url TEXT
+);
+CREATE INDEX IF NOT EXISTS wiki_rc_ts_idx ON wiki_rc(ts DESC);
 """
 
-INS = """
+SQL_INS_NEWS = """
 INSERT INTO news_articles(published_ts, source, title, url, summary, kind)
 VALUES (%s,%s,%s,%s,%s,%s)
 ON CONFLICT (url) DO NOTHING;
 """
+SQL_INS_WIKI = """
+INSERT INTO wiki_rc(ts, page, user_name, comment, delta, url)
+VALUES (%s,%s,%s,%s,%s,%s)
+ON CONFLICT (url) DO NOTHING;
+"""
 
-def log(msg): print(f"{datetime.now(timezone.utc).isoformat()} [ingest] {msg}", flush=True)
-
+# ---------------- DB ----------------
 def conn():
     return psycopg2.connect(DB_URL, sslmode="require")
 
-def norm_ts(e):
-    if getattr(e, "published_parsed", None):
-        return datetime(*e.published_parsed[:6], tzinfo=timezone.utc)
-    return datetime.now(timezone.utc)
+def log(msg):
+    print(f"{datetime.now(timezone.utc).isoformat()} [ingest] {msg}", flush=True)
 
-def pull_feed(url):
+# ---------------- RSS ----------------
+def fetch_rss(feed_list, kind):
+    rows = []
+    for u in feed_list:
+        try:
+            d = feedparser.parse(requests.get(u, headers=HDRS, timeout=20).content)
+            src = urlparse(u).netloc.replace("www.", "")
+            for e in d.entries[:50]:
+                ts = datetime.now(timezone.utc)
+                if e.get("published_parsed"):
+                    ts = datetime(*e.published_parsed[:6], tzinfo=timezone.utc)
+                rows.append((
+                    ts,
+                    src,
+                    (e.get("title","") or "").strip(),
+                    e.get("link",""),
+                    (e.get("summary","") or "")[:600],
+                    kind
+                ))
+        except Exception as ex:
+            log(f"RSS fail {u}: {ex}")
+    return rows
+
+# ---------------- Wikipedia ----------------
+def fetch_wiki_recent():
+    params = {
+        "action": "query",
+        "format": "json",
+        "list": "recentchanges",
+        "rcprop": "title|user|comment|timestamp|sizes",
+        "rcnamespace": "0",
+        "rctype": "edit|new",
+        "rcshow": "!bot",
+        "rclimit": "20",
+        "rcdir": "newer"
+    }
     try:
-        d = feedparser.parse(requests.get(url, headers=HDRS, timeout=20).content)
-        src = urlparse(url).netloc.replace("www.", "")
+        r = requests.get(WIKI_URL, params=params, timeout=20, headers=HDRS)
+        r.raise_for_status()
+        data = r.json()
         rows = []
-        for e in d.entries[:50]:
+        for rc in data.get("query", {}).get("recentchanges", []):
+            newlen = rc.get("newlen", 0)
+            oldlen = rc.get("oldlen", 0)
+            delta = int(newlen - oldlen)
+            ts = datetime.fromisoformat(rc["timestamp"].replace("Z", "+00:00"))
             rows.append((
-                norm_ts(e),
-                src,
-                (e.get("title","") or "").strip(),
-                e.get("link","") or "",
-                (e.get("summary","") or "")[:600],
-                "rss"
+                ts,
+                rc.get("title"),
+                rc.get("user"),
+                rc.get("comment"),
+                delta,
+                f"https://{WIKI_DOMAIN}/wiki/{(rc.get('title') or '').replace(' ', '_')}"
             ))
         return rows
     except Exception as ex:
-        log(f"fail {url}: {ex}")
+        log(f"WIKI fail: {ex}")
         return []
 
-def pull_wikipedia():
-    try:
-        r = requests.get("https://stream.wikimedia.org/v2/stream/recentchange", timeout=20)
-    except Exception:
-        return []
-
+# ---------------- MAIN ----------------
 def main():
-    log("DB connect + table init")
     with conn() as c, c.cursor() as cur:
         cur.execute(DDL)
-    total = 0
-    for f in FEEDS:
-        rows = pull_feed(f)
-        if not rows: continue
-        with conn() as c, c.cursor() as cur:
-            execute_batch(cur, INS, rows, page_size=200)
-        total += len(rows)
-        log(f"{f} -> {len(rows)} articles")
-    log(f"TOTAL inserted: {total}")
+
+    total_news = 0
+    total_wiki = 0
+
+    # UNE
+    une_rows = fetch_rss(FEEDS_UNE, "une")
+    with conn() as c, c.cursor() as cur:
+        execute_batch(cur, SQL_INS_NEWS, une_rows, page_size=200)
+    total_news += len(une_rows)
+
+    # CONTINU
+    cont_rows = fetch_rss(FEEDS_CONTINU, "continu")
+    with conn() as c, c.cursor() as cur:
+        execute_batch(cur, SQL_INS_NEWS, cont_rows, page_size=200)
+    total_news += len(cont_rows)
+
+    # WIKIPEDIA
+    wiki_rows = fetch_wiki_recent()
+    with conn() as c, c.cursor() as cur:
+        execute_batch(cur, SQL_INS_WIKI, wiki_rows, page_size=200)
+    total_wiki += len(wiki_rows)
+
+    log(f"Inserted: News={total_news}, Wiki={total_wiki}")
 
 if __name__ == "__main__":
     main()
