@@ -32,7 +32,7 @@ ON CONFLICT (url) DO NOTHING;
 """
 
 def conn():
-    c=psycopg2.connect(host=DBH, dbname=DBN, user=DBU, password=DBP, port=DBPORT)
+    c=psycopg2.connect(host=DBH, dbname=DBN, user=DBU, password=DBP, port=DBPORT, sslmode="disable")
     c.autocommit=True
     return c
 
