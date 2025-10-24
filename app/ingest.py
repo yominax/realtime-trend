@@ -46,10 +46,11 @@ CREATE INDEX IF NOT EXISTS news_articles_published_idx ON news_articles(publishe
 CREATE TABLE IF NOT EXISTS wiki_rc(
   id BIGSERIAL PRIMARY KEY,
   ts TIMESTAMPTZ NOT NULL,
-  page TEXT, user_name TEXT, comment TEXT, delta INT, url TEXT
+  page TEXT, user_name TEXT, comment TEXT, delta INT, url TEXT UNIQUE
 );
 CREATE INDEX IF NOT EXISTS wiki_rc_ts_idx ON wiki_rc(ts DESC);
 """
+
 
 SQL_INS_NEWS = """
 INSERT INTO news_articles(published_ts, source, title, url, summary, kind)
