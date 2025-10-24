@@ -63,8 +63,10 @@ ON CONFLICT (url) DO NOTHING;
 """
 
 # ----------------- Fonctions -----------------
+
+
 def conn():
-    # Retente plusieurs fois avant d'abandonner
+    # Retente la connexion plusieurs fois (10x)
     for _ in range(10):
         try:
             return psycopg2.connect(
@@ -74,13 +76,12 @@ def conn():
                 password=DBP,
                 port=DBPORT,
                 connect_timeout=10,
-                sslmode="disable"  # <-- Force désactivation SSL
+                sslmode="require"  # Render impose SSL
             )
         except psycopg2.OperationalError as e:
             print(f"[DB] Connexion échouée: {e}")
             time.sleep(3)
     raise RuntimeError("Impossible de se connecter à la base PostgreSQL après plusieurs tentatives.")
-
 
 def norm_ts(e):
     if e.get("published_parsed"):
