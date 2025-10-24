@@ -43,7 +43,7 @@ def conn():
         try:
             c = psycopg2.connect(
                 host=DBH, dbname=DBN, user=DBU, password=DBP, port=DBPORT,
-                sslmode="require"   # Render exige SSL
+                sslmode="disable"   # Render exige SSL
             )
             c.autocommit = True
             return c
