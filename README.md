@@ -26,4 +26,5 @@ apercu : https://realtime-trend-4.onrender.com/
 git clone https://github.com/yominax/trends-realtime.git
 cd trends-realtime
 docker compose up -d --build
+   http://localhost:8501
  

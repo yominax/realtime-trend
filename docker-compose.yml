@@ -36,16 +36,7 @@ services:
       POLL_SEC: "5"
     restart: unless-stopped
 
-  hn-producer:
-    build:
-      context: ./producers/hn
-    depends_on: [kafka]
-    environment:
-      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-      TOPIC: hn_posts
-      POLL_SEC: "20"
-      TOP_N: "50"
-    restart: unless-stopped
+ 
 
   db-writer:
     build:
