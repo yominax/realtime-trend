@@ -64,9 +64,23 @@ ON CONFLICT (url) DO NOTHING;
 
 # ----------------- Fonctions -----------------
 def conn():
-    c = psycopg2.connect(host=DBH, dbname=DBN, user=DBU, password=DBP, port=DBPORT)
-    c.autocommit = True
-    return c
+    # Retente plusieurs fois avant d'abandonner
+    for _ in range(10):
+        try:
+            return psycopg2.connect(
+                host=DBH,
+                dbname=DBN,
+                user=DBU,
+                password=DBP,
+                port=DBPORT,
+                connect_timeout=10,
+                sslmode="disable"  # <-- Force désactivation SSL
+            )
+        except psycopg2.OperationalError as e:
+            print(f"[DB] Connexion échouée: {e}")
+            time.sleep(3)
+    raise RuntimeError("Impossible de se connecter à la base PostgreSQL après plusieurs tentatives.")
+
 
 def norm_ts(e):
     if e.get("published_parsed"):
