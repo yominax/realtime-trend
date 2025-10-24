@@ -18,14 +18,17 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
+        working-directory: ./app
         run: |
-          pip install requests feedparser psycopg2-binary
+          python -m pip install --upgrade pip
+          pip install --no-cache-dir requests feedparser psycopg2-binary
 
       - name: Run ingestion
+        working-directory: ./app
         env:
           DB_HOST: ${{ secrets.DB_HOST }}
           DB_NAME: ${{ secrets.DB_NAME }}
           DB_USER: ${{ secrets.DB_USER }}
           DB_PASS: ${{ secrets.DB_PASS }}
           DB_PORT: ${{ secrets.DB_PORT }}
-        run: python app/ingest.py --once
+        run: python ingest.py --once
