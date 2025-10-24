@@ -2,34 +2,30 @@ name: Scheduled Ingest (every 5m)
 
 on:
   schedule:
-    - cron: '*/5 * * * *'   
-  workflow_dispatch:       
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
 
 jobs:
   ingest:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
-      - name: Install deps
+      - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install feedparser psycopg2-binary
+          pip install requests feedparser psycopg2-binary
 
-      - name: Run ingest script
+      - name: Run ingestion
         env:
           DB_HOST: ${{ secrets.DB_HOST }}
           DB_NAME: ${{ secrets.DB_NAME }}
           DB_USER: ${{ secrets.DB_USER }}
           DB_PASS: ${{ secrets.DB_PASS }}
           DB_PORT: ${{ secrets.DB_PORT }}
-        run: |
-          python app/ingest.py --once
+        run: python app/ingest.py --once
