@@ -42,14 +42,26 @@ CREATE TABLE IF NOT EXISTS news_articles(
   source TEXT, title TEXT, url TEXT UNIQUE, summary TEXT, kind TEXT
 );
 CREATE INDEX IF NOT EXISTS news_articles_published_idx ON news_articles(published_ts DESC);
+CREATE INDEX IF NOT EXISTS news_articles_kind_idx ON news_articles(kind, published_ts DESC);
 
 CREATE TABLE IF NOT EXISTS wiki_rc(
   id BIGSERIAL PRIMARY KEY,
   ts TIMESTAMPTZ NOT NULL,
-  page TEXT, user_name TEXT, comment TEXT, delta INT, url TEXT UNIQUE
+  page TEXT, user_name TEXT, comment TEXT, delta INT, url TEXT
 );
 CREATE INDEX IF NOT EXISTS wiki_rc_ts_idx ON wiki_rc(ts DESC);
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'unique_wiki_url' AND conrelid = 'wiki_rc'::regclass
+  ) THEN
+    ALTER TABLE wiki_rc ADD CONSTRAINT unique_wiki_url UNIQUE (url);
+  END IF;
+END $$;
 """
+
 
 
 SQL_INS_NEWS = """
