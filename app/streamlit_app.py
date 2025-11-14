@@ -13,7 +13,7 @@ DBP = os.getenv("DB_PASS", "trends")
 DBPORT = int(os.getenv("DB_PORT", "5432"))
 REFRESH = int(os.getenv("REFRESH_SEC", "60"))
 
-st.set_page_config(page_title="Trends Live — Médias FR", layout="wide")
+st.set_page_config(page_title="Trends Live, Médias FR MainStream", layout="wide")
  
 st.markdown(
     """
