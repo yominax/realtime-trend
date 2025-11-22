@@ -31,7 +31,7 @@ st.markdown(
 )
 
 
-st.title("Trends Live — Médias FR")
+st.title("Trends Live, Médias FR")
 
 
 
